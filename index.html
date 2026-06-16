@@ -543,55 +543,90 @@ body::before {
 /* ── MOBILE ── */
 @media(max-width:600px){
   /* Header */
-  .header { padding:0 12px; height:54px; gap:8px; }
-  .brand-logo { width:40px; height:40px; }
-  .brand-name { font-size:16px; }
+  .header { padding:0 10px; height:52px; gap:6px; }
+  .brand-logo { width:36px; height:36px; }
+  .brand-name { font-size:15px; letter-spacing:1px; }
   .brand-tag { display:none; }
-  .header-right { gap:6px; }
+  .header-right { gap:5px; }
   #rTimer { display:none; }
 
-  /* Ticker */
+  /* Ticker — hide on mobile */
   .ticker-wrap { display:none; }
 
-  /* Stats bar — horizontal scroll, compact */
-  .stats-bar { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; }
-  .sp { min-width:90px; padding:8px 12px; }
-  .sv { font-size:15px; }
+  /* Stats bar — horizontal scroll, don't wrap */
+  .stats-bar { flex-wrap:nowrap; overflow-x:auto; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+  .stats-bar::-webkit-scrollbar { display:none; }
+  .sp { min-width:80px; max-width:80px; padding:7px 8px; flex-shrink:0; }
+  .sv { font-size:14px; }
+  .sl { font-size:8px; }
 
   /* Round tabs */
-  .round-tabs { padding:0 8px; gap:4px; overflow-x:auto; }
+  .round-tabs { padding:0 8px; gap:3px; overflow-x:auto; scrollbar-width:none; flex-wrap:nowrap; }
+  .round-tabs::-webkit-scrollbar { display:none; }
+  .rt-btn { padding:6px 12px; font-size:10px; white-space:nowrap; }
 
   /* Main content */
-  .main { padding:8px; }
-  .g2,.g3 { grid-template-columns:1fr; gap:8px; margin-bottom:8px; }
-  .fc { margin-bottom:8px; }
+  .main { padding:6px; }
+  .g2,.g3 { grid-template-columns:1fr; gap:6px; margin-bottom:6px; }
+  .fc { margin-bottom:6px; }
 
-  /* Spotlight strip — smaller cards */
-  .ss-card { width:90px; }
+  /* Cards */
+  .card { border-radius:4px; }
+  .ch { padding:10px 10px 7px; }
+  .ch h2 { font-size:13px; }
+  .pw { padding:10px; }
 
-  /* Leaderboard — hide less critical columns on small screens */
+  /* Spotlight strip */
+  .ss-card { width:82px; flex-shrink:0; }
+  .ss-photo { height:70px; }
+  .ss-name { font-size:9px; }
+  .ss-score { font-size:13px; }
+  .ss-today { font-size:8px; }
+
+  /* Leaderboard — only show essential columns, let table fill width */
   .lbt .r1-col, .lbt .r2-col, .lbt .r3-col, .lbt .r4-col { display:none; }
   .lbt .thru-col { display:none; }
   .lbt .hot-col { display:none; }
   .lbt .mom-col { display:none; }
-  .lb-scroll { max-height:none; }
-  .lbt td, .lbt th { padding:5px 6px; font-size:10px; }
-  .pname { font-size:11px; }
+  .lb-scroll { max-height:none; overflow-x:hidden; }
+  .lbt { width:100%; table-layout:fixed; }
+  .lbt th, .lbt td { padding:5px 4px; font-size:10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .lbt th:first-child, .lbt td:first-child { width:28px; }  /* compare btn */
+  .lbt th:nth-child(2), .lbt td:nth-child(2) { width:32px; }  /* pos */
+  .lbt th:nth-child(3), .lbt td:nth-child(3) { width:auto; }  /* player — takes remaining space */
+  .lbt th:nth-child(4), .lbt td:nth-child(4) { width:42px; text-align:right; }  /* total */
+  .lbt th:last-child, .lbt td:last-child { width:42px; text-align:right; }  /* today */
+  .pname { font-size:10px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:110px; }
   .pctry { display:none; }
-  .lb-photo { width:22px; height:22px; }
-  .lb-photo-init { width:22px; height:22px; font-size:7px; }
+  .lb-photo { width:20px; height:20px; }
+  .lb-photo-init { width:20px; height:20px; font-size:6px; }
+  .csel-btn { width:18px; height:18px; font-size:10px; }
 
-  /* Player panel */
-  .pp-hero { flex-direction:column; align-items:center; text-align:center; gap:12px; }
-  .pp-photo { width:100px; height:100px; }
-  .pp-initials-lg { width:100px; height:100px; font-size:30px; }
+  /* Charts — full width */
+  .pw canvas { max-height:200px; }
+
+  /* Player panel — full screen, stacked */
+  .pp-hero { flex-direction:column; align-items:center; text-align:center; gap:10px; padding:14px 14px 10px; }
+  .pp-photo { width:90px; height:90px; }
+  .pp-initials-lg { width:90px; height:90px; font-size:26px; }
+  .pp-player-name { font-size:18px; }
+  .pp-total-score { font-size:32px; }
+  .pp-stats-row { grid-template-columns:repeat(3,1fr); margin:0 12px 14px; }
+  .pp-stat-v { font-size:18px; }
+  .sc-tabs { margin:0 12px 1px; }
+  .sc-round { padding:0 12px 16px; }
+  .sc-scroll { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .sc-table { font-size:9.5px; }
+  .sc-table td { min-width:20px; height:22px; }
+}
+
+/* Extra small screens (iPhone SE etc) */
+@media(max-width:380px){
+  .brand-name { font-size:13px; }
+  .sp { min-width:70px; max-width:70px; }
+  .sv { font-size:13px; }
+  .pname { max-width:80px; }
   .pp-stats-row { grid-template-columns:repeat(3,1fr); }
-  .pp-total-score { font-size:34px; }
-
-  /* Cards */
-  .card { border-radius:4px; }
-  .ch { padding:12px 12px 8px; }
-  .pw { padding:12px; }
 }
 
 .pp-topbar {
@@ -1248,8 +1283,10 @@ function initPerfChart(competitors){
   const all=[...top10,...Array(gap).fill(null),...bot10];
   const labels=all.map((p,i)=>{if(!p)return'';const ln=p.name.split(' ').pop();const rank=i<top10.length?`T${i+1}`:`T${active.length-(all.length-1-i)}`;return`${rank} ${ln}`;});
   const scores=all.map(p=>p?p.toPar:null);
+  const barH=window.innerWidth<600?20:26;
+  ctx.style.height=(all.length*barH+60)+'px';
   const colors=all.map((p,i)=>{if(!p)return'transparent';if(i<top10.length){const t=i/(top10.length-1||1);return`rgba(${Math.round(0+t*255)},${Math.round(255-t*71)},${Math.round(136-t*108)},0.8)`;}const pos=i-top10.length-gap;const t=pos/(bot10.length-1||1);return`rgba(255,${Math.round(56-t*40)},${Math.round(96-t*80)},0.8)`;});
-  CH.perf=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:scores,backgroundColor:colors,borderColor:colors.map(c=>c==='transparent'?'transparent':c.replace('0.8','1')),borderWidth:1,borderRadius:2,barThickness:22}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:true,plugins:{legend:{display:false},tooltip:{filter:i=>i.raw!==null,callbacks:{label:c=>c.raw!==null?` Final: ${f2p(c.raw)}`:''}}},scales:{x:{grid:{color:'rgba(10,31,58,0.8)'},ticks:{color:'#4a7090',callback:v=>v===0?'E':v>0?'+'+v:v,font:{family:'Rajdhani, sans-serif'}}},y:{grid:{display:false},ticks:{color:ctx=>{const i=ctx.index;if(i<top10.length)return'#00ff88';if(i>=top10.length+gap)return'#ff3860';return'transparent';},font:{size:11,weight:'600',family:'Rajdhani, sans-serif'}}}}}});
+  CH.perf=new Chart(ctx,{type:'bar',data:{labels,datasets:[{data:scores,backgroundColor:colors,borderColor:colors.map(c=>c==='transparent'?'transparent':c.replace('0.8','1')),borderWidth:1,borderRadius:2,maxBarThickness:window.innerWidth<600?16:22}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{filter:i=>i.raw!==null,callbacks:{label:c=>c.raw!==null?` Final: ${f2p(c.raw)}`:''}}},scales:{x:{grid:{color:'rgba(10,31,58,0.8)'},ticks:{color:'#4a7090',callback:v=>v===0?'E':v>0?'+'+v:v,font:{family:'Rajdhani, sans-serif'}}},y:{grid:{display:false},ticks:{color:ctx=>{const i=ctx.index;if(i<top10.length)return'#00ff88';if(i>=top10.length+gap)return'#ff3860';return'transparent';},font:{size:11,weight:'600',family:'Rajdhani, sans-serif'}}}}}});
 }
 
 // ── PODIUM ──
