@@ -948,15 +948,16 @@ function parseData(json){
     return{id:c.id,name:(c.athlete||{}).displayName||'Unknown',country:((c.athlete||{}).flag||{}).alt||'',posDisplay:c.status==='cut'?'CUT':((c.position||{}).displayName||'--'),toPar:p2p(c.score),scoreStr:c.score||'E',rounds,status:c.status||'active',linescores:c.linescores||[]};
   }).sort((a,b)=>a.toPar-b.toPar);
   const maxRound=Math.max(...competitors.flatMap(c=>c.rounds.map(r=>r.period)),1);
-  const holeStats=calcHoleStats(competitors, maxRound);
-  return{info,competitors,holeStats,maxRound};
+  const holeStatsByRound={};
+  for(let r=1;r<=maxRound;r++) holeStatsByRound[r]=calcHoleStats(competitors,r);
+  return{info,competitors,holeStatsByRound,maxRound};
 }
 
-function calcHoleStats(competitors, currentRound){
+function calcHoleStats(competitors, roundNum){
   const st=Array.from({length:18},(_,i)=>({hole:i+1,eagles:0,birdies:0,pars:0,bogeys:0,doubles:0,total:0}));
   for(const c of competitors){
-    // Only count the current round so percentages match what's happening today
-    const r=(c.rounds||[]).find(r=>Number(r.period)===currentRound);
+    // Only count the selected round — find by period, coerce to number to avoid string/number mismatch
+    const r=(c.rounds||[]).find(r=>Number(r.period)===roundNum);
     if(!r) continue;
     for(let i=0;i<Math.min((r.holes||[]).length,18);i++){
       const h=r.holes[i];
@@ -1363,8 +1364,10 @@ function closeModal(){document.getElementById('cmpModal').classList.remove('open
 
 // ── MAIN RENDER ──
 function render(data){
-  const{info,competitors,holeStats,maxRound}=data;
+  const{info,competitors,holeStatsByRound,maxRound}=data;
   const round=S.round,wx=S.weather;
+  // Pick the stats for the currently selected round tab
+  const holeStats=holeStatsByRound[round]||holeStatsByRound[maxRound]||[];
   hmCache=holeStats;
   const hasHoles=holeStats.some(h=>h.total>0);
   const isOff=info.isFinal&&!info.isLive;
