@@ -947,26 +947,30 @@ function parseData(json){
     const rounds=(c.linescores||[]).map(r=>{const holes=r.linescores||[];return{period:r.period,strokes:r.value||0,toPar:p2p(r.displayValue),holes,thru:holes.filter(h=>h.value!==undefined&&h.value!==null).length};});
     return{id:c.id,name:(c.athlete||{}).displayName||'Unknown',country:((c.athlete||{}).flag||{}).alt||'',posDisplay:c.status==='cut'?'CUT':((c.position||{}).displayName||'--'),toPar:p2p(c.score),scoreStr:c.score||'E',rounds,status:c.status||'active',linescores:c.linescores||[]};
   }).sort((a,b)=>a.toPar-b.toPar);
-  const holeStats=calcHoleStats(competitors);
   const maxRound=Math.max(...competitors.flatMap(c=>c.rounds.map(r=>r.period)),1);
+  const holeStats=calcHoleStats(competitors, maxRound);
   return{info,competitors,holeStats,maxRound};
 }
 
-function calcHoleStats(competitors){
+function calcHoleStats(competitors, currentRound){
   const st=Array.from({length:18},(_,i)=>({hole:i+1,eagles:0,birdies:0,pars:0,bogeys:0,doubles:0,total:0}));
-  for(const c of competitors)for(const r of(c.rounds||[]))for(let i=0;i<Math.min((r.holes||[]).length,18);i++){
-    const h=r.holes[i];
-    // Skip unplayed holes — rely on scoreType.displayValue being present
-    // NOTE: value=0 means par (even), NOT unplayed — do not skip it
-    if(!h||h.value===undefined||h.value===null) continue;
-    const t=(h.scoreType&&h.scoreType.displayValue)||'';
-    if(!t) continue; // empty scoreType = hole not yet played
-    st[i].total++;
-    if(t==='-3'||t==='-4'||t==='-2')st[i].eagles++;
-    else if(t==='-1')st[i].birdies++;
-    else if(t==='E'||t==='0')st[i].pars++;
-    else if(t==='+1')st[i].bogeys++;
-    else st[i].doubles++;
+  for(const c of competitors){
+    // Only count the current round so percentages match what's happening today
+    const r=(c.rounds||[]).find(r=>r.period===currentRound);
+    if(!r) continue;
+    for(let i=0;i<Math.min((r.holes||[]).length,18);i++){
+      const h=r.holes[i];
+      // value=0 means par (even par), NOT unplayed — do not skip it
+      if(!h||h.value===undefined||h.value===null) continue;
+      const t=(h.scoreType&&h.scoreType.displayValue)||'';
+      if(!t) continue; // empty scoreType = hole not yet played this round
+      st[i].total++;
+      if(t==='-3'||t==='-4'||t==='-2')st[i].eagles++;
+      else if(t==='-1')st[i].birdies++;
+      else if(t==='E'||t==='0')st[i].pars++;
+      else if(t==='+1')st[i].bogeys++;
+      else st[i].doubles++;
+    }
   }
   return st.map(s=>{const t=s.total||1;return{...s,birdiePct:Math.round((s.birdies+s.eagles)/t*100),bogeyPct:Math.round(s.bogeys/t*100),doublePct:Math.round(s.doubles/t*100),overPct:Math.round((s.bogeys+s.doubles)/t*100),parPct:Math.round(s.pars/t*100),net:Math.round((s.birdies+s.eagles-s.bogeys-s.doubles)/t*100)};});
 }
