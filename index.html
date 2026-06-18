@@ -944,7 +944,21 @@ function parseData(json){
   const st=ev.status||{};const stt=((st.type||{}).description||'').toLowerCase();
   const info={name:ev.name||ev.shortName||'PGA Tour',venue:(comp.venue||{}).fullName||'',city:((comp.venue||{}).address||{}).city||'',state:((comp.venue||{}).address||{}).state||'',round:st.period||1,isLive:stt.includes('progress'),isFinal:stt.includes('final')||stt.includes('complete'),isSusp:stt.includes('suspend')};
   const competitors=(comp.competitors||[]).map(c=>{
-    const rounds=(c.linescores||[]).map(r=>{const holes=r.linescores||[];return{period:r.period,strokes:r.value||0,toPar:p2p(r.displayValue),holes,thru:holes.filter(h=>h.value!==undefined&&h.value!==null).length};});
+    const rounds=(c.linescores||[]).map(r=>{
+      const holes=r.linescores||[];
+      // Identify played holes by hole number (period). Only count holes with a real scoreType.
+      const playedNums=new Set(holes.filter(h=>h.value!=null&&h.scoreType&&h.scoreType.displayValue).map(h=>Number(h.period)));
+      // Detect back-9 start: min played hole ≥10, OR all 9 back-9 holes done while front-9 incomplete
+      const minPlayed=playedNums.size>0?Math.min(...playedNums):0;
+      const b9=([...playedNums].filter(n=>n>=10).length),f9=([...playedNums].filter(n=>n<=9).length);
+      const startsBack=(minPlayed>=10)||(b9===9&&f9<9);
+      const seq=startsBack?[10,11,12,13,14,15,16,17,18,1,2,3,4,5,6,7,8,9]:[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18];
+      // Walk sequence to count consecutive played holes (stop at first gap)
+      let thru=0;for(const h of seq){if(playedNums.has(h))thru++;else break;}
+      const currentHole=thru<18?seq[thru]:null; // next hole player is on
+      const lastHole=thru>0?seq[thru-1]:null;    // last completed hole number
+      return{period:r.period,strokes:r.value||0,toPar:p2p(r.displayValue),holes,thru,currentHole,lastHole,startsBack};
+    });
     return{id:c.id,name:(c.athlete||{}).displayName||'Unknown',country:((c.athlete||{}).flag||{}).alt||'',posDisplay:c.status==='cut'?'CUT':((c.position||{}).displayName||'--'),toPar:p2p(c.score),scoreStr:c.score||'E',rounds,status:c.status||'active',linescores:c.linescores||[]};
   }).sort((a,b)=>a.toPar-b.toPar);
   // Filter out sentinel periods (402, etc.) when computing maxRound
@@ -1144,7 +1158,7 @@ function renderLeaderboard(competitors,round){
     const pcls=(pos==='1'||pos===1)?'p1':(['T2','2',2,'T3','3',3].includes(pos))?'ptop':'';
     const cr=c.rounds.find(r=>r.period===round);
     const cs=cr?(cr.toPar===0?'E':f2p(cr.toPar)):'--';
-    const thru=cr?(cr.thru===18?'F':cr.thru||'--'):'--';
+    const thru=cr?(cr.thru===18?'F':cr.lastHole!=null?cr.lastHole:'--'):'--';
     const r=n=>{const rnd=c.rounds.find(r=>r.period===n);return rnd?rnd.strokes:'--';};
     const isS1=S.compare[0]===c.id,isS2=S.compare[1]===c.id;
     const inits=initials(c.name);
@@ -1232,7 +1246,7 @@ function renderF9B9(competitors,round){
 function renderPositionBoard(competitors,round){
   const active=competitors.filter(c=>c.status!=='cut');
   const hm=Array.from({length:18},()=>[]);
-  for(const c of active){const r=c.rounds.find(r=>r.period===round);if(!r||r.thru>=18)continue;const on=r.thru+1;if(on>=1&&on<=18)hm[on-1].push(c);}
+  for(const c of active){const r=c.rounds.find(r=>r.period===round);if(!r||r.thru>=18||!r.currentHole)continue;const on=r.currentHole;if(on>=1&&on<=18)hm[on-1].push(c);}
   const fin=active.filter(c=>{const r=c.rounds.find(r=>r.period===round);return r&&r.thru===18;}).length;
   const ns=active.filter(c=>!c.rounds.some(r=>r.period===round)).length;
   const holes=hm.map((pl,i)=>{
