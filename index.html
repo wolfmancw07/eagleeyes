@@ -967,7 +967,7 @@ function calcHoleStats(competitors){
     else if(t==='+1')st[i].bogeys++;
     else st[i].doubles++;
   }
-  return st.map(s=>{const t=s.total||1;return{...s,birdiePct:Math.round((s.birdies+s.eagles)/t*100),bogeyPct:Math.round((s.bogeys+s.doubles)/t*100),parPct:Math.round(s.pars/t*100),net:Math.round((s.birdies+s.eagles-s.bogeys-s.doubles)/t*100)};});
+  return st.map(s=>{const t=s.total||1;return{...s,birdiePct:Math.round((s.birdies+s.eagles)/t*100),bogeyPct:Math.round(s.bogeys/t*100),doublePct:Math.round(s.doubles/t*100),overPct:Math.round((s.bogeys+s.doubles)/t*100),parPct:Math.round(s.pars/t*100),net:Math.round((s.birdies+s.eagles-s.bogeys-s.doubles)/t*100)};});
 }
 
 async function fetchWeather(city){
@@ -1237,9 +1237,9 @@ function renderPositionBoard(competitors,round){
 // ── CALLOUTS ──
 function renderCallouts(hs){
   const bb=[...hs].sort((a,b)=>b.birdiePct-a.birdiePct);
-  const bg=[...hs].sort((a,b)=>b.bogeyPct-a.bogeyPct);
-  const cells=[...bb.slice(0,2).map(s=>`<div class="cl birdie"><div class="ch2">Hole ${s.hole} · Par ${STD_PARS[s.hole-1]}</div><div class="cn">${s.birdiePct}%</div><div class="clb">🐦 BIRDIE HOT</div><div class="csub2">${s.bogeyPct}% bogey</div></div>`),
-    ...bg.slice(0,2).map(s=>`<div class="cl bogey"><div class="ch2">Hole ${s.hole} · Par ${STD_PARS[s.hole-1]}</div><div class="cn">${s.bogeyPct}%</div><div class="clb">💀 BOGEY TRAP</div><div class="csub2">${s.birdiePct}% birdie</div></div>`)];
+  const bg=[...hs].sort((a,b)=>b.overPct-a.overPct);
+  const cells=[...bb.slice(0,2).map(s=>`<div class="cl birdie"><div class="ch2">Hole ${s.hole} · Par ${STD_PARS[s.hole-1]}</div><div class="cn">${s.birdiePct}%</div><div class="clb">🐦 BIRDIE HOT</div><div class="csub2">${s.bogeyPct}% bogey · ${s.doublePct}% dbl+</div></div>`),
+    ...bg.slice(0,2).map(s=>`<div class="cl bogey"><div class="ch2">Hole ${s.hole} · Par ${STD_PARS[s.hole-1]}</div><div class="cn">${s.bogeyPct}%</div><div class="clb">💀 BOGEY TRAP</div><div class="csub2">${s.doublePct}% double+ · ${s.birdiePct}% birdie</div></div>`)];
   return`<div class="card fc"><div class="ch"><div><h2>📊 Key Holes This Week</h2><div class="csub">Performance this week earns your spot on this list</div></div></div><div class="cg">${cells.join('')}</div></div>`;
 }
 
@@ -1247,7 +1247,7 @@ function renderCallouts(hs){
 let hmCache=[];
 function renderHeatmap(hs,wx){
   hmCache=hs;
-  const row=(s,e)=>hs.slice(s,e).map(s=>{const c=holeColor(s.net);const big=s.birdiePct>s.bogeyPct;return`<div class="hc" style="background:${c.bg};border-color:${c.br}" onmouseenter="showTT(event,${s.hole-1})" onmouseleave="hideTT()"><div class="hn">H${s.hole}</div><div class="hp">Par ${STD_PARS[s.hole-1]}</div><div class="hpct">${big?s.birdiePct:s.bogeyPct}%</div><div class="hlbl">${big?'🐦 BIRDIE':'💀 BOGEY'}</div></div>`;}).join('');
+  const row=(s,e)=>hs.slice(s,e).map(s=>{const c=holeColor(s.net);const big=s.birdiePct>s.overPct;return`<div class="hc" style="background:${c.bg};border-color:${c.br}" onmouseenter="showTT(event,${s.hole-1})" onmouseleave="hideTT()"><div class="hn">H${s.hole}</div><div class="hp">Par ${STD_PARS[s.hole-1]}</div><div class="hpct">${big?s.birdiePct:s.bogeyPct}%</div><div class="hlbl">${big?'🐦 BIRDIE':'💀 BOGEY'}${!big&&s.doublePct>0?`<span style="font-size:8px;opacity:0.8"> · ${s.doublePct}% DBL+</span>`:''}</div></div>`;}).join('');
   return`<div class="card fc"><div class="ch"><div><h2>⛳ Hole Heatmap</h2><div class="csub">Real rates from all player scorecards · Hover for detail</div></div>${wx?`<div style="font-size:9px;color:var(--muted2);font-family:'Rajdhani',sans-serif">💨 ${wx.wind}mph ${windDir(wx.windDir)}</div>`:''}</div>
     <div class="hm-section">
       <div class="hm-label">Front Nine · 1–9</div><div class="hm-grid">${row(0,9)}</div>
@@ -1262,7 +1262,7 @@ function renderHeatmap(hs,wx){
     </div></div>`;
 }
 
-function showTT(e,idx){const s=hmCache[idx];if(!s)return;const tt=document.getElementById('tt');tt.innerHTML=`<div class="ttt">Hole ${s.hole} · Par ${STD_PARS[idx]}</div><div class="ttr"><span class="ttl">🐦 Birdie</span><span class="ttv under">${s.birdiePct}%</span></div><div class="ttr"><span class="ttl">💀 Bogey+</span><span class="ttv over">${s.bogeyPct}%</span></div><div class="ttr"><span class="ttl">➖ Par</span><span class="ttv">${s.parPct}%</span></div><div class="ttr"><span class="ttl">📈 Net</span><span class="ttv">${s.net>=0?'+'+s.net:s.net}%</span></div><div class="ttr"><span class="ttl">Scorecards</span><span class="ttv">${s.total}</span></div>`;tt.style.display='block';posTT(e);}
+function showTT(e,idx){const s=hmCache[idx];if(!s)return;const tt=document.getElementById('tt');tt.innerHTML=`<div class="ttt">Hole ${s.hole} · Par ${STD_PARS[idx]}</div><div class="ttr"><span class="ttl">🐦 Birdie</span><span class="ttv under">${s.birdiePct}%</span></div><div class="ttr"><span class="ttl">➖ Par</span><span class="ttv">${s.parPct}%</span></div><div class="ttr"><span class="ttl">💀 Bogey</span><span class="ttv over">${s.bogeyPct}%</span></div><div class="ttr"><span class="ttl">☠️ Double+</span><span class="ttv over">${s.doublePct}%</span></div><div class="ttr"><span class="ttl">📈 Net</span><span class="ttv">${s.net>=0?'+'+s.net:s.net}%</span></div><div class="ttr"><span class="ttl">Scorecards</span><span class="ttv">${s.total}</span></div>`;tt.style.display='block';posTT(e);}
 document.addEventListener('mousemove',e=>{const tt=document.getElementById('tt');if(tt.style.display==='block')posTT(e);});
 function posTT(e){const tt=document.getElementById('tt');let x=e.clientX+14,y=e.clientY-10;if(x+170>window.innerWidth)x=e.clientX-180;if(y+150>window.innerHeight)y=e.clientY-155;tt.style.left=x+'px';tt.style.top=y+'px';}
 function hideTT(){document.getElementById('tt').style.display='none';}
@@ -1306,14 +1306,14 @@ function renderTournStats(info,hs,competitors){
   const avg=active.length?(active.reduce((s,c)=>s+c.toPar,0)/active.length).toFixed(1):'--';
   const tb=hs.reduce((s,h)=>s+h.birdies,0),tbo=hs.reduce((s,h)=>s+h.bogeys+h.doubles,0);
   const ratio=tbo>0?(tb/tbo).toFixed(2):'--';
-  const hard=[...hs].sort((a,b)=>b.bogeyPct-a.bogeyPct)[0],easy=[...hs].sort((a,b)=>b.birdiePct-a.birdiePct)[0];
+  const hard=[...hs].sort((a,b)=>b.overPct-a.overPct)[0],easy=[...hs].sort((a,b)=>b.birdiePct-a.birdiePct)[0];
   return`<div class="card fc"><div class="ch"><div><h2>🏟 Tournament Stats</h2><div class="csub">Aggregated from all scorecards</div></div></div><div class="tsg">
     <div class="tsc"><div class="tsl">Field Avg</div><div class="tsv ${parseFloat(avg)<0?'under':'over'}">${parseFloat(avg)>0?'+':''}${avg}</div><div class="tss">to par</div></div>
     <div class="tsc"><div class="tsl">Birdies</div><div class="tsv green">${tb.toLocaleString()}</div><div class="tss">total</div></div>
     <div class="tsc"><div class="tsl">Bogeys+</div><div class="tsv red">${tbo.toLocaleString()}</div><div class="tss">total</div></div>
     <div class="tsc"><div class="tsl">B/B Ratio</div><div class="tsv ${parseFloat(ratio)>=1?'under':'over'}">${ratio}</div><div class="tss">&gt;1.0 = friendly</div></div>
     <div class="tsc"><div class="tsl">Easiest</div><div class="tsv green">H${easy.hole}</div><div class="tss">${easy.birdiePct}% birdie</div></div>
-    <div class="tsc"><div class="tsl">Hardest</div><div class="tsv red">H${hard.hole}</div><div class="tss">${hard.bogeyPct}% bogey</div></div>
+    <div class="tsc"><div class="tsl">Hardest</div><div class="tsv red">H${hard.hole}</div><div class="tss">${hard.bogeyPct}% bogey · ${hard.doublePct}% dbl+</div></div>
   </div></div>`;
 }
 
