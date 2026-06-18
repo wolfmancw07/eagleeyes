@@ -956,10 +956,11 @@ function calcHoleStats(competitors){
   const st=Array.from({length:18},(_,i)=>({hole:i+1,eagles:0,birdies:0,pars:0,bogeys:0,doubles:0,total:0}));
   for(const c of competitors)for(const r of(c.rounds||[]))for(let i=0;i<Math.min((r.holes||[]).length,18);i++){
     const h=r.holes[i];
-    // Skip unplayed holes — only count holes where a score was actually recorded
-    if(!h||h.value===undefined||h.value===null||h.value===0) continue;
+    // Skip unplayed holes — rely on scoreType.displayValue being present
+    // NOTE: value=0 means par (even), NOT unplayed — do not skip it
+    if(!h||h.value===undefined||h.value===null) continue;
     const t=(h.scoreType&&h.scoreType.displayValue)||'';
-    if(!t) continue; // skip holes with no score type (no data)
+    if(!t) continue; // empty scoreType = hole not yet played
     st[i].total++;
     if(t==='-3'||t==='-4'||t==='-2')st[i].eagles++;
     else if(t==='-1')st[i].birdies++;
