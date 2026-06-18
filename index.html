@@ -947,10 +947,12 @@ function parseData(json){
     const rounds=(c.linescores||[]).map(r=>{const holes=r.linescores||[];return{period:r.period,strokes:r.value||0,toPar:p2p(r.displayValue),holes,thru:holes.filter(h=>h.value!==undefined&&h.value!==null).length};});
     return{id:c.id,name:(c.athlete||{}).displayName||'Unknown',country:((c.athlete||{}).flag||{}).alt||'',posDisplay:c.status==='cut'?'CUT':((c.position||{}).displayName||'--'),toPar:p2p(c.score),scoreStr:c.score||'E',rounds,status:c.status||'active',linescores:c.linescores||[]};
   }).sort((a,b)=>a.toPar-b.toPar);
-  const maxRound=Math.max(...competitors.flatMap(c=>c.rounds.map(r=>r.period)),1);
+  // Filter out sentinel periods (402, etc.) when computing maxRound
+  const maxRound=Math.max(...competitors.flatMap(c=>c.rounds.map(r=>r.period)).filter(p=>p<10),1);
+  // Build fallback hole stats from scoreboard players (partial field — full field loaded async)
   const holeStatsByRound={};
   for(let r=1;r<=maxRound;r++) holeStatsByRound[r]=calcHoleStats(competitors,r);
-  return{info,competitors,holeStatsByRound,maxRound};
+  return{info,competitors,holeStatsByRound,maxRound,eventId:ev.id};
 }
 
 function calcHoleStats(competitors, roundNum){
@@ -1425,6 +1427,54 @@ function startTimer(){
   S.timer=setInterval(()=>{S.cd--;const el=document.getElementById('rTimer');if(el)el.textContent=S.cd>0?`Refresh in ${S.cd}s`:'Refreshing…';if(S.cd<=0){loadData(false);}},1000);
 }
 
+// ── FULL FIELD HOLE STATS (ESPN Core API — all 150+ players) ──
+async function fetchFullFieldHoleStats(eventId){
+  try{
+    const base=`https://sports.core.api.espn.com/v2/sports/golf/leagues/pga/events/${eventId}/competitions/${eventId}`;
+    // Step 1: get all competitor IDs
+    const list=await fetch(`${base}/competitors?limit=300`,{signal:AbortSignal.timeout(8000)}).then(r=>r.json());
+    const ids=(list.items||[]).map(item=>{
+      const m=(item['$ref']||'').match(/competitors\/(\d+)/);return m?m[1]:null;
+    }).filter(Boolean);
+    if(!ids.length)return null;
+
+    // Step 2: fetch all linescores in parallel
+    const results=await Promise.allSettled(ids.map(id=>
+      fetch(`${base}/competitors/${id}/linescores`,{signal:AbortSignal.timeout(10000)}).then(r=>r.json())
+    ));
+
+    // Step 3: aggregate by round
+    const byRound={};
+    for(const res of results){
+      if(res.status!=='fulfilled')continue;
+      for(const rnd of(res.value.items||[])){
+        const rNum=Number(rnd.period);if(!rNum||rNum>9)continue; // skip sentinels
+        if(!byRound[rNum])byRound[rNum]=Array.from({length:18},(_,i)=>({hole:i+1,eagles:0,birdies:0,pars:0,bogeys:0,doubles:0,total:0}));
+        for(const h of(rnd.linescores||[])){
+          const idx=Number(h.period)-1;if(idx<0||idx>17)continue;
+          const tn=((h.scoreType||{}).name||'').toUpperCase();
+          byRound[rNum][idx].total++;
+          if(tn==='EAGLE'||tn==='DOUBLE_EAGLE'||tn==='HOLE_IN_ONE')byRound[rNum][idx].eagles++;
+          else if(tn==='BIRDIE')byRound[rNum][idx].birdies++;
+          else if(tn==='PAR')byRound[rNum][idx].pars++;
+          else if(tn==='BOGEY')byRound[rNum][idx].bogeys++;
+          else if(tn)byRound[rNum][idx].doubles++; // DOUBLE_BOGEY, TRIPLE_BOGEY, etc.
+        }
+      }
+    }
+
+    // Step 4: compute percentages (same format as calcHoleStats)
+    const holeStatsByRound={};
+    for(const [rNum,st] of Object.entries(byRound)){
+      holeStatsByRound[Number(rNum)]=st.map(s=>{
+        const t=s.total||1;
+        return{...s,birdiePct:Math.round((s.birdies+s.eagles)/t*100),bogeyPct:Math.round(s.bogeys/t*100),doublePct:Math.round(s.doubles/t*100),overPct:Math.round((s.bogeys+s.doubles)/t*100),parPct:Math.round(s.pars/t*100),net:Math.round((s.birdies+s.eagles-s.bogeys-s.doubles)/t*100)};
+      });
+    }
+    return holeStatsByRound;
+  }catch(e){console.warn('Full field fetch failed:',e);return null;}
+}
+
 async function loadData(spinner=true){
   const btn=document.querySelector('.refresh-btn');if(btn)btn.classList.add('spinning');
   try{
@@ -1434,6 +1484,13 @@ async function loadData(spinner=true){
     const data=parseData(json);
     if(!data)throw new Error('No golf events returned. Check back Thursday–Sunday during tournament weeks.');
     if(!S.data)S.round=data.info.round;
+    // Fetch full field hole stats in parallel with render
+    fetchFullFieldHoleStats(data.eventId).then(fullStats=>{
+      if(fullStats&&S.data){
+        S.data.holeStatsByRound=fullStats;
+        render(S.data); // re-render with accurate full-field stats
+      }
+    });
     S.data=data;
     if(data.info.city&&!S.weather)fetchWeather(data.info.city).then(wx=>{S.weather=wx;if(S.data)render(S.data);});
     render(data);startTimer();
