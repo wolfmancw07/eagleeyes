@@ -1785,4 +1785,126 @@ function buildScorecard(c){
       return `<td class="sc-cell ${cls}">${h.value}</td>`;
     });
 
-    const f9vals = hole
+    const f9vals = holes.slice(0,9).map(h=>h&&h.value!=null?Number(h.value):null);
+    const b9vals = holes.slice(9,18).map(h=>h&&h.value!=null?Number(h.value):null);
+    const f9done = f9vals.filter(v=>v!==null).length;
+    const b9done = b9vals.filter(v=>v!==null).length;
+    const f9tot  = f9vals.filter(v=>v!==null).reduce((a,b)=>a+b,0);
+    const b9tot  = b9vals.filter(v=>v!==null).reduce((a,b)=>a+b,0);
+    const tot    = f9tot + b9tot;
+    const f9cls  = f9done===9 ? tpc(f9tot-parF9)  : 'muted';
+    const b9cls  = b9done===9 ? tpc(b9tot-parB9)  : 'muted';
+    const totcls = (f9done+b9done)>0 ? tpc(tot-parTot) : 'muted';
+
+    return `<div class="sc-round ${ri===0?'active':''}" data-ri="${ri}">
+      <div class="sc-scroll">
+        <table class="sc-table">
+          <tr>
+            <td class="sc-label">Hole</td>
+            ${STD_PARS.slice(0,9).map((_,i)=>`<td class="sc-hole-num">${i+1}</td>`).join('')}
+            <td class="sc-out">OUT</td>
+            ${STD_PARS.slice(9).map((_,i)=>`<td class="sc-hole-num">${i+10}</td>`).join('')}
+            <td class="sc-in">IN</td>
+            <td class="sc-tot">TOT</td>
+          </tr>
+          <tr class="sc-par-row">
+            <td class="sc-label">Par</td>
+            ${STD_PARS.slice(0,9).map(p=>`<td>${p}</td>`).join('')}
+            <td class="sc-out">${parF9}</td>
+            ${STD_PARS.slice(9).map(p=>`<td>${p}</td>`).join('')}
+            <td class="sc-in">${parB9}</td>
+            <td class="sc-tot">${parTot}</td>
+          </tr>
+          <tr>
+            <td class="sc-label">Score</td>
+            ${cells.slice(0,9).join('')}
+            <td class="sc-out ${f9cls}">${f9done===9?f9tot:'--'}</td>
+            ${cells.slice(9).join('')}
+            <td class="sc-in ${b9cls}">${b9done===9?b9tot:'--'}</td>
+            <td class="sc-tot ${totcls}">${(f9done+b9done)>0?tot:'--'}</td>
+          </tr>
+        </table>
+      </div>
+    </div>`;
+  });
+
+  return `<div class="sc-tabs">${tabs}</div>${sheets.join('')}`;
+}
+
+function switchScorecardTab(btn, idx){
+  const panel = document.getElementById('playerPanel');
+  panel.querySelectorAll('.sc-tab').forEach(t=>t.classList.remove('active'));
+  panel.querySelectorAll('.sc-round').forEach(r=>r.classList.remove('active'));
+  btn.classList.add('active');
+  const rounds = panel.querySelectorAll('.sc-round');
+  if(rounds[idx]) rounds[idx].classList.add('active');
+}
+
+async function fetchPlayerBio(id){
+  try{
+    const res = await fetch(`https://site.web.api.espn.com/apis/common/v3/sports/golf/athletes/${id}?region=us&lang=en`, {signal:AbortSignal.timeout(4000)});
+    if(!res.ok) return null;
+    const d = await res.json();
+    const a = d.athlete||{};
+    return {
+      age: a.age||null,
+      height: a.displayHeight||null,
+      weight: a.displayWeight||null,
+      birthPlace: a.birthPlace ? [a.birthPlace.city, a.birthPlace.state||a.birthPlace.country].filter(Boolean).join(', ') : null,
+      turnedPro: a.turnedPro||null,
+    };
+  } catch(e){ return null; }
+}
+
+function updatePanelBio(bio){
+  const el = document.getElementById('ppBio');
+  if(!el) return;
+  const parts = [];
+  if(bio.age) parts.push(`Age ${bio.age}`);
+  if(bio.height) parts.push(bio.height);
+  if(bio.birthPlace) parts.push(bio.birthPlace);
+  if(bio.turnedPro) parts.push(`Pro since ${bio.turnedPro}`);
+  el.textContent = parts.join(' · ');
+}
+
+</script>
+
+<canvas id="threeCanvas"></canvas>
+<div id="tsparticles"></div>
+
+<!-- Player panel -->
+<div id="panelOverlay" onclick="closePlayerPanel()"></div>
+<div id="playerPanel">
+  <div class="pp-topbar">
+    <span class="pp-topbar-title">Player Profile</span>
+    <button class="pp-close-btn" onclick="closePlayerPanel()">✕</button>
+  </div>
+  <div id="panelBody"></div>
+</div>
+
+<!-- Compare modal -->
+<div id="cmpModal" class="modal-overlay" onclick="if(event.target===this)closeModal()">
+  <div class="modal">
+    <div class="modal-header">
+      <h2>⚡ Head to Head</h2>
+      <button class="modal-close" onclick="closeModal()">✕</button>
+    </div>
+    <div class="modal-body" id="cmpBody"></div>
+  </div>
+</div>
+
+<!-- Compare CTA -->
+<div class="cmp-cta" id="cmpCta">
+  <div class="cmp-cta-names" id="cmpNames"></div>
+  <button class="cmp-cta-btn" onclick="openCompare()">Compare</button>
+  <button class="cmp-clear" onclick="clearCompare()">✕</button>
+</div>
+
+<!-- Tooltip -->
+<div id="tt"><div class="ttt"></div></div>
+
+<!-- App root -->
+<div id="app"><div class="ls"><div class="spinner"></div><div class="lt">Scanning the field…</div></div></div>
+
+</body>
+</html>
