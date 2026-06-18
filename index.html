@@ -1253,8 +1253,17 @@ function renderCallouts(hs){
 let hmCache=[];
 function renderHeatmap(hs,wx){
   hmCache=hs;
-  const row=(s,e)=>hs.slice(s,e).map(s=>{const c=holeColor(s.net);const big=s.birdiePct>s.overPct;return`<div class="hc" style="background:${c.bg};border-color:${c.br}" onmouseenter="showTT(event,${s.hole-1})" onmouseleave="hideTT()"><div class="hn">H${s.hole}</div><div class="hp">Par ${STD_PARS[s.hole-1]}</div><div class="hpct">${big?s.birdiePct:s.bogeyPct}%</div><div class="hlbl">${big?'🐦 BIRDIE':'💀 BOGEY'}${!big&&s.doublePct>0?`<span style="font-size:8px;opacity:0.8"> · ${s.doublePct}% DBL+</span>`:''}</div></div>`;}).join('');
-  return`<div class="card fc"><div class="ch"><div><h2>⛳ Hole Heatmap</h2><div class="csub">Real rates from all player scorecards · Hover for detail</div></div>${wx?`<div style="font-size:9px;color:var(--muted2);font-family:'Rajdhani',sans-serif">💨 ${wx.wind}mph ${windDir(wx.windDir)}</div>`:''}</div>
+  const row=(s,e)=>hs.slice(s,e).map(s=>{const c=holeColor(s.net);return`<div class="hc" style="background:${c.bg};border-color:${c.br}" onmouseenter="showTT(event,${s.hole-1})" onmouseleave="hideTT()">
+    <div class="hn">H${s.hole}</div><div class="hp">Par ${STD_PARS[s.hole-1]}</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:2px 4px;margin-top:5px;font-size:9px;font-family:'Rajdhani',sans-serif;font-weight:700;line-height:1.5">
+      <div style="color:#ffc107">🦅 ${s.eagles}</div>
+      <div style="color:#00ff88">🐦 ${s.birdies}</div>
+      <div style="color:rgba(255,255,255,0.45)">— ${s.pars}</div>
+      <div style="color:#ff3860">💀 ${s.bogeys}</div>
+      <div style="color:#ff3860;opacity:0.65;grid-column:1/-1">☠️ ${s.doubles}</div>
+    </div>
+  </div>`;}).join('');
+  return`<div class="card fc"><div class="ch"><div><h2>⛳ Hole Heatmap</h2><div class="csub">Score counts per hole · Hover for totals · Color = difficulty</div></div>${wx?`<div style="font-size:9px;color:var(--muted2);font-family:'Rajdhani',sans-serif">💨 ${wx.wind}mph ${windDir(wx.windDir)}</div>`:''}</div>
     <div class="hm-section">
       <div class="hm-label">Front Nine · 1–9</div><div class="hm-grid">${row(0,9)}</div>
       <div class="hm-label" style="margin-top:8px">Back Nine · 10–18</div><div class="hm-grid">${row(9,18)}</div>
@@ -1268,7 +1277,7 @@ function renderHeatmap(hs,wx){
     </div></div>`;
 }
 
-function showTT(e,idx){const s=hmCache[idx];if(!s)return;const tt=document.getElementById('tt');tt.innerHTML=`<div class="ttt">Hole ${s.hole} · Par ${STD_PARS[idx]}</div><div class="ttr"><span class="ttl">🐦 Birdie</span><span class="ttv under">${s.birdiePct}%</span></div><div class="ttr"><span class="ttl">➖ Par</span><span class="ttv">${s.parPct}%</span></div><div class="ttr"><span class="ttl">💀 Bogey</span><span class="ttv over">${s.bogeyPct}%</span></div><div class="ttr"><span class="ttl">☠️ Double+</span><span class="ttv over">${s.doublePct}%</span></div><div class="ttr"><span class="ttl">📈 Net</span><span class="ttv">${s.net>=0?'+'+s.net:s.net}%</span></div><div class="ttr"><span class="ttl">Scorecards</span><span class="ttv">${s.total}</span></div>`;tt.style.display='block';posTT(e);}
+function showTT(e,idx){const s=hmCache[idx];if(!s)return;const tt=document.getElementById('tt');tt.innerHTML=`<div class="ttt">Hole ${s.hole} · Par ${STD_PARS[idx]}</div><div class="ttr"><span class="ttl">🦅 Eagle</span><span class="ttv" style="color:#ffc107">${s.eagles}</span></div><div class="ttr"><span class="ttl">🐦 Birdie</span><span class="ttv under">${s.birdies}</span></div><div class="ttr"><span class="ttl">— Par</span><span class="ttv">${s.pars}</span></div><div class="ttr"><span class="ttl">💀 Bogey</span><span class="ttv over">${s.bogeys}</span></div><div class="ttr"><span class="ttl">☠️ Double+</span><span class="ttv over">${s.doubles}</span></div><div class="ttr" style="border-top:1px solid var(--border);margin-top:5px;padding-top:5px"><span class="ttl">Scorecards</span><span class="ttv">${s.total}</span></div>`;tt.style.display='block';posTT(e);}
 document.addEventListener('mousemove',e=>{const tt=document.getElementById('tt');if(tt.style.display==='block')posTT(e);});
 function posTT(e){const tt=document.getElementById('tt');let x=e.clientX+14,y=e.clientY-10;if(x+170>window.innerWidth)x=e.clientX-180;if(y+150>window.innerHeight)y=e.clientY-155;tt.style.left=x+'px';tt.style.top=y+'px';}
 function hideTT(){document.getElementById('tt').style.display='none';}
