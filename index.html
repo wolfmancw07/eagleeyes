@@ -956,7 +956,7 @@ function calcHoleStats(competitors, currentRound){
   const st=Array.from({length:18},(_,i)=>({hole:i+1,eagles:0,birdies:0,pars:0,bogeys:0,doubles:0,total:0}));
   for(const c of competitors){
     // Only count the current round so percentages match what's happening today
-    const r=(c.rounds||[]).find(r=>r.period===currentRound);
+    const r=(c.rounds||[]).find(r=>Number(r.period)===currentRound);
     if(!r) continue;
     for(let i=0;i<Math.min((r.holes||[]).length,18);i++){
       const h=r.holes[i];
