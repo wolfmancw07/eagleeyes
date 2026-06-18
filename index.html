@@ -955,14 +955,17 @@ function parseData(json){
 function calcHoleStats(competitors){
   const st=Array.from({length:18},(_,i)=>({hole:i+1,eagles:0,birdies:0,pars:0,bogeys:0,doubles:0,total:0}));
   for(const c of competitors)for(const r of(c.rounds||[]))for(let i=0;i<Math.min((r.holes||[]).length,18);i++){
-    const h=r.holes[i],t=(h.scoreType&&h.scoreType.displayValue)||'';
+    const h=r.holes[i];
+    // Skip unplayed holes — only count holes where a score was actually recorded
+    if(!h||h.value===undefined||h.value===null||h.value===0) continue;
+    const t=(h.scoreType&&h.scoreType.displayValue)||'';
+    if(!t) continue; // skip holes with no score type (no data)
     st[i].total++;
-    if(t==='-3'||t==='-4')st[i].eagles++;
-    else if(t==='-2')st[i].eagles++;
+    if(t==='-3'||t==='-4'||t==='-2')st[i].eagles++;
     else if(t==='-1')st[i].birdies++;
     else if(t==='E'||t==='0')st[i].pars++;
     else if(t==='+1')st[i].bogeys++;
-    else if(t==='+2'||t==='+3'||t==='+4')st[i].doubles++;
+    else st[i].doubles++;
   }
   return st.map(s=>{const t=s.total||1;return{...s,birdiePct:Math.round((s.birdies+s.eagles)/t*100),bogeyPct:Math.round((s.bogeys+s.doubles)/t*100),parPct:Math.round(s.pars/t*100),net:Math.round((s.birdies+s.eagles-s.bogeys-s.doubles)/t*100)};});
 }
